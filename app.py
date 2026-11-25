@@ -2,14 +2,20 @@
 import random
 from datetime import datetime
 
+import base64
+import os
+
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
+
+from iso_scene import scene_html
 
 from evacuation.model import ZONE_NAMES, zone_of
 from evacuation.planner import plan
 from evacuation.simulate import POLICIES, evaluate, run_episode, WAIT_TIME
 
-st.set_page_config(page_title="Evacuation Assistant", page_icon="🧯", layout="wide")
+st.set_page_config(page_title="Kitty Escape · Evacuation Assistant", page_icon="🐱", layout="wide")
 
 BLUE, PURPLE, GREEN, RED, ORANGE, NAVY = "#1CB0F6", "#7C3AED", "#16A34A", "#EF4444", "#F59E0B", "#123F63"
 ZONE_FILL = ["#FDE2E7", "#FEF3C7", "#DCFCE7", "#DBEAFE"]
@@ -73,7 +79,7 @@ def go(page):
 
 
 with st.sidebar:
-    st.markdown("<div class='brand'>🧯 Evac<span>AI</span></div>", unsafe_allow_html=True)
+    st.markdown("<div class='brand'>🐱 Kitty<span>Escape</span></div>", unsafe_allow_html=True)
     for icon, name in PAGES:
         st.button(f"{icon}  {name}", key=f"nav_{name}", on_click=go, args=(name,),
                   type="primary" if st.session_state.page == name else "secondary")
@@ -147,13 +153,21 @@ page = st.session_state.page
 if page == "Home":
     hour = datetime.now().hour
     greet = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
-    st.markdown(f"<div class='hero'><h1>{greet}, <span>let's get everyone out safely</span></h1>"
-                "<p>An AI assistant that reads noisy smoke sensors and chooses the safest way out of a burning building.</p></div>",
-                unsafe_allow_html=True)
+    hero_l, hero_r = st.columns([2.2, 1], gap="large")
+    with hero_l:
+        st.markdown(f"<div class='hero'><h1>{greet}! <span>Help Kitty escape the burning house</span></h1>"
+                    "<p>Kitty is trapped inside. Smoke sensors are noisy and the fire moves. Four AI algorithms "
+                    "work together to choose the safest way out.</p></div>", unsafe_allow_html=True)
+    with hero_r:
+        kpath = os.path.join(os.path.dirname(__file__), "assets", "kitty.jpg")
+        if os.path.exists(kpath):
+            b64 = base64.b64encode(open(kpath, "rb").read()).decode()
+            st.markdown(f"<img src='data:image/jpeg;base64,{b64}' style='width:100%;max-width:260px;border-radius:28px;"
+                        f"box-shadow:0 8px 24px rgba(15,23,42,.15);display:block;margin-left:auto'>", unsafe_allow_html=True)
     st.write("")
     c1, c2, _ = st.columns([1.2, 1.2, 3])
-    c1.button("Open the planner  →", type="primary", on_click=go, args=("Planner",))
-    c2.button("Watch a simulation", on_click=go, args=("Simulation",))
+    c1.button("Play: guide Kitty  →", type="primary", on_click=go, args=("Planner",))
+    c2.button("Watch Kitty run a random fire", on_click=go, args=("Simulation",))
     st.write("")
     tiles = [("4", "AI algorithms"), ("16", "passing tests"), ("5000", "simulated fires"), ("11.2%", "harm rate (vs 19.7%)")]
     for col, (num, lab) in zip(st.columns(4), tiles):
@@ -207,17 +221,17 @@ elif page == "Planner":
     action = r["action"]
     with right:
         colr = {"PROCEED": GREEN, "DETOUR": ORANGE, "WAIT": BLUE}[action]
-        text = {"PROCEED": "The fast route is probably clear. Take the shortest way out.",
-                "DETOUR": "The fast route is too risky. Take the longer, safer route.",
-                "WAIT": "Not enough information. Stay in place and read the sensors again."}[action]
+        text = {"PROCEED": "The fast route is probably clear. Kitty runs the shortest way out! 🐾",
+                "DETOUR": "The fast route is too risky. Kitty takes the longer, safer route. 🛡️",
+                "WAIT": "Not enough information. Kitty stays put and listens to the sensors. 👂"}[action]
         st.markdown(f"<div class='banner' style='background:{colr}'><h2>{action}</h2><p>{text}</p></div>",
                     unsafe_allow_html=True)
-        m, o = st.columns([1.05, 1], gap="medium")
-        with m:
-            with st.container(border=True):
-                st.markdown(map_html(r["world"], r["route"]["path"] if r["route"] else None,
-                                     zone_risk=r["zone_risk"] if show_risk else None), unsafe_allow_html=True)
-                st.caption("🧍 you · 🚪 exits · 📷 door camera · green = chosen route")
+        with st.container(border=True):
+            components.html(scene_html(r["world"], r["route"]["path"] if r["route"] else None,
+                                       zone_risk=r["zone_risk"] if show_risk else None,
+                                       caption="Kitty is the round token · EXIT = exits · blue camera = door camera · "
+                                               "green dots = chosen route"), height=420)
+        o = st.container()
         with o:
             st.markdown("**MDP: expected value of each action**")
             st.markdown(decision_options(r["action_values"], action), unsafe_allow_html=True)
@@ -242,8 +256,8 @@ elif page == "Planner":
 
 # ---------------------------------------------------------------- SIMULATION
 elif page == "Simulation":
-    st.markdown("<div class='hero'><h1>Simulation</h1><p>One random fire. The assistant sees only noisy sensors; "
-                "the real fire is revealed so you can check it.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='hero'><h1>Simulation</h1><p>A random fire breaks out. Kitty's assistant sees only noisy sensors; "
+                "the real fire is revealed so you can check its choice.</p></div>", unsafe_allow_html=True)
     st.write("")
     if "seed" not in st.session_state:
         st.session_state.seed = 1
@@ -271,8 +285,9 @@ elif page == "Simulation":
                  f"<span class='muted'>Real fire:</span> {ZONE_SHORT[e['true_fire_zone']]} {'✅' if ok else '❌'}")
     with right:
         with st.container(border=True):
-            st.markdown(map_html(plan([])["world"], out["route"], blocked=log[-1]["blocked_zones"]), unsafe_allow_html=True)
-            st.caption("🔥 = zone that is really blocked (hidden from the assistant)")
+            components.html(scene_html(plan([])["world"], out["route"], blocked=log[-1]["blocked_zones"],
+                                       caption="Flames = zones that are really blocked (hidden from the assistant)"),
+                            height=400)
         t1, t2, t3 = st.columns(3)
         t1.markdown(f"<div class='tile'><b>{out['time']}</b><small>steps</small></div>", unsafe_allow_html=True)
         t2.markdown(f"<div class='tile'><b>{out['waits']}</b><small>waits</small></div>", unsafe_allow_html=True)
@@ -281,10 +296,10 @@ elif page == "Simulation":
         st.write("")
         if out["harmed"]:
             note = "" if out["blocked"] else " The route was clear: even a clear route keeps a 2% risk."
-            st.markdown(f"<div class='banner' style='background:{RED}'><h2>Harmed</h2><p>Bad outcome.{note}</p></div>",
+            st.markdown(f"<div class='banner' style='background:{RED}'><h2>Kitty got hurt 😿</h2><p>Bad outcome.{note}</p></div>",
                         unsafe_allow_html=True)
         else:
-            st.markdown(f"<div class='banner' style='background:{GREEN}'><h2>Safe</h2><p>The person evacuated safely.</p></div>",
+            st.markdown(f"<div class='banner' style='background:{GREEN}'><h2>Kitty escaped! 😺</h2><p>Kitty got out of the burning house safely.</p></div>",
                         unsafe_allow_html=True)
 
 # ---------------------------------------------------------------- EVALUATION
