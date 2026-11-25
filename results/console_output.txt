@@ -1,0 +1,17 @@
+Assistant (HMM + A* + Bayes + MDP)       harm 0.112 +- 0.004  time 4.87  utility 50.5 +- 1.8  waited 0.081
+No HMM (ignores smoke sensors)           harm 0.188 +- 0.006  time 6.39  utility 18.3 +- 2.2  waited 0.325
+No Bayes (ignores door camera)           harm 0.141 +- 0.005  time 4.85  utility 38.6 +- 2.0  waited 0.080
+No MDP, threshold 0.5 (hand-tuned)       harm 0.113 +- 0.004  time 4.53  utility 50.1 +- 1.8  waited 0.000
+No MDP, threshold 0.2                    harm 0.118 +- 0.005  time 4.88  utility 48.0 +- 1.8  waited 0.000
+No MDP, threshold 0.8                    harm 0.129 +- 0.005  time 4.30  utility 43.9 +- 1.9  waited 0.000
+Always shortest route                    harm 0.197 +- 0.006  time 4.00  utility 17.2 +- 2.3  waited 0.000
+Always safe detour                       harm 0.330 +- 0.007  time 6.66  utility -38.7 +- 2.7  waited 0.000
+
+Sensor quality P(alarm | fire in same zone) -> harm rate
+  0.55: assistant 0.130, always shortest 0.190
+  0.65: assistant 0.113, always shortest 0.190
+  0.75: assistant 0.117, always shortest 0.190
+  0.85: assistant 0.113, always shortest 0.190
+  0.95: assistant 0.103, always shortest 0.190
+
+Charts saved to results/

@@ -1,0 +1,52 @@
+======================================================================
+0. No information yet (no sensor steps, no camera)
+INPUT  sensors per step (Z0,Z1,Z2,Z3): []
+       door camera: None
+HMM    belief about the fire zone: [0.250, 0.250, 0.250, 0.250] -> Z0 north-west
+RISK   P(cell blocked) per zone  : [0.255, 0.255, 0.255, 0.255]
+A*     fast route to (0, 5): 4 steps, risk 0.255
+       safe route to (7, 2): 6 steps, risk 0.456
+BAYES  P(fast route blocked): prior 0.255 -> posterior 0.255
+MDP    expected value: {'PROCEED': 18.6, 'DETOUR': -38.0, 'WAIT': 4.9}
+OUTPUT decision: PROCEED, go to exit (0, 5) via 4 steps
+       path: [(4, 5), (3, 5), (2, 5), (1, 5), (0, 5)]
+WHY     the fast route is probably clear, so the shortest way is best.
+======================================================================
+1. All quiet, door camera shows CLEAR
+INPUT  sensors per step (Z0,Z1,Z2,Z3): [(0, 0, 0, 0), (0, 0, 0, 0)]
+       door camera: CLEAR
+HMM    belief about the fire zone: [0.250, 0.250, 0.250, 0.250] -> Z0 north-west
+RISK   P(cell blocked) per zone  : [0.255, 0.255, 0.255, 0.255]
+A*     fast route to (0, 5): 4 steps, risk 0.255
+       safe route to (7, 2): 6 steps, risk 0.456
+BAYES  P(fast route blocked): prior 0.255 -> posterior 0.057
+MDP    expected value: {'PROCEED': 72.5, 'DETOUR': -38.0, 'WAIT': 20.6}
+OUTPUT decision: PROCEED, go to exit (0, 5) via 4 steps
+       path: [(4, 5), (3, 5), (2, 5), (1, 5), (0, 5)]
+WHY     the fast route is probably clear, so the shortest way is best.
+======================================================================
+2. Alarm in Z1 for two steps, door camera shows SMOKE
+INPUT  sensors per step (Z0,Z1,Z2,Z3): [(0, 1, 0, 0), (0, 1, 0, 0)]
+       door camera: SMOKE
+HMM    belief about the fire zone: [0.012, 0.976, 0.000, 0.012] -> Z1 north-east
+RISK   P(cell blocked) per zone  : [0.155, 0.687, 0.023, 0.155]
+A*     fast route to (0, 5): 4 steps, risk 0.687
+       safe route to (7, 2): 6 steps, risk 0.174
+BAYES  P(fast route blocked): prior 0.687 -> posterior 0.925
+MDP    expected value: {'PROCEED': -163.7, 'DETOUR': 38.7, 'WAIT': 17.1}
+OUTPUT decision: DETOUR, go to exit (7, 2) via 6 steps
+       path: [(4, 5), (4, 4), (4, 3), (4, 2), (5, 2), (6, 2), (7, 2)]
+WHY     the fast route is too risky for its speed, so the longer safe way has the higher expected value.
+======================================================================
+3. Alarm in Z1 for two steps, door camera shows CLEAR
+INPUT  sensors per step (Z0,Z1,Z2,Z3): [(0, 1, 0, 0), (0, 1, 0, 0)]
+       door camera: CLEAR
+HMM    belief about the fire zone: [0.012, 0.976, 0.000, 0.012] -> Z1 north-east
+RISK   P(cell blocked) per zone  : [0.155, 0.687, 0.023, 0.155]
+A*     fast route to (0, 5): 4 steps, risk 0.687
+       safe route to (7, 2): 6 steps, risk 0.174
+BAYES  P(fast route blocked): prior 0.687 -> posterior 0.279
+MDP    expected value: {'PROCEED': 12.1, 'DETOUR': 38.7, 'WAIT': 37.2}
+OUTPUT decision: DETOUR, go to exit (7, 2) via 6 steps
+       path: [(4, 5), (4, 4), (4, 3), (4, 2), (5, 2), (6, 2), (7, 2)]
+WHY     the fast route is too risky for its speed, so the longer safe way has the higher expected value.

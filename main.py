@@ -6,6 +6,7 @@ Q = (False, False, False, False)
 Z1 = (False, True, False, False)
 
 SCENARIOS = [
+    ("0. No information yet (no sensor steps, no camera)", [], None),
     ("1. All quiet, door camera shows CLEAR", [Q, Q], "CLEAR"),
     ("2. Alarm in Z1 for two steps, door camera shows SMOKE", [Z1, Z1], "SMOKE"),
     ("3. Alarm in Z1 for two steps, door camera shows CLEAR", [Z1, Z1], "CLEAR"),
@@ -29,8 +30,11 @@ def show(title, observations, door):
     print(f"       safe route to {r['safe']['exit']}: {r['safe']['steps']} steps, risk {r['safe']['risk']:.3f}")
     print(f"BAYES  P(fast route blocked): prior {r['p_fast_prior']:.3f} -> posterior {r['p_fast_posterior']:.3f}")
     print("MDP    expected value:", {a: round(v, 1) for a, v in r["action_values"].items()})
-    print(f"OUTPUT decision: {r['action']}, go to exit {r['route']['exit']} via {len(r['route']['path']) - 1} steps")
-    print("       path:", r["route"]["path"])
+    if r["route"]:
+        print(f"OUTPUT decision: {r['action']}, go to exit {r['route']['exit']} via {r['route']['steps']} steps")
+        print("       path:", r["route"]["path"])
+    else:
+        print("OUTPUT decision: WAIT, stay in place and read the sensors again")
     why = {"PROCEED": "the fast route is probably clear, so the shortest way is best.",
            "DETOUR": "the fast route is too risky for its speed, so the longer safe way has the higher expected value.",
            "WAIT": "the situation is unclear, so waiting for more information scores best."}[r["action"]]

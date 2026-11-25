@@ -75,3 +75,35 @@ def test_plan_fire_in_z1_but_door_clear_still_detours():
 
 def test_plan_fire_far_from_fast_route_proceeds():
     assert plan([(False, False, False, True)] * 2, "CLEAR")["action"] == "PROCEED"
+
+
+def test_wait_has_no_route():
+    r = plan([], None)
+    if r["action"] == "WAIT":
+        assert r["route"] is None
+    else:
+        assert r["route"] is not None
+
+
+def test_route_risk_is_probability():
+    from evacuation.planner import route_risk
+    r = plan([Z1_ALARM, Z1_ALARM], None)
+    for route in (r["fast"], r["safe"]):
+        assert 0.0 <= route_risk(route["path"], r["belief"]) <= 1.0
+    assert r["fast"]["risk"] > r["safe"]["risk"]
+
+
+def test_simulation_is_reproducible():
+    from evacuation.simulate import evaluate, POLICIES
+    p = POLICIES["Assistant (HMM + A* + Bayes + MDP)"]
+    assert evaluate(p, 200, 5) == evaluate(p, 200, 5)
+
+
+def test_assistant_beats_baselines_in_simulation():
+    from evacuation.simulate import evaluate, POLICIES
+    full = evaluate(POLICIES["Assistant (HMM + A* + Bayes + MDP)"], 2000, 11)
+    shortest = evaluate("PROCEED", 2000, 11)
+    no_hmm = evaluate(POLICIES["No HMM (ignores smoke sensors)"], 2000, 11)
+    assert full["harm_rate"] < shortest["harm_rate"]
+    assert full["utility"] > shortest["utility"]
+    assert full["utility"] > no_hmm["utility"]
