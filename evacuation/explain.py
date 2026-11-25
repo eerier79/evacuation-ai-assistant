@@ -16,7 +16,11 @@ def why(r):
     out = []
     if r["steps"]:
         z = max(range(len(r["belief"])), key=lambda k: r["belief"][k])
-        out.append(f"The sensors point to a fire in {ZONE_NAMES[z]} ({pct(r['belief'][z])} sure).")
+        if r["belief"][z] >= 0.4:
+            out.append(f"The sensors point to a fire in {ZONE_NAMES[z]} ({pct(r['belief'][z])} sure).")
+        else:
+            out.append(f"The sensors do not point to any zone yet: the most likely one, {ZONE_NAMES[z]}, "
+                       f"is only {pct(r['belief'][z])}.")
     else:
         out.append("No sensor readings yet, so every zone is equally likely to be on fire.")
     out.append(f"The fast route ({fast['steps']} steps) is blocked with probability {pct(prior)}; "

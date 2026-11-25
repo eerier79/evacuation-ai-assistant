@@ -10,6 +10,8 @@ Kitty is trapped in a burning house. Four smoke alarms give noisy signals about 
 watches the door on the shortest way out. The assistant decides: **PROCEED** on the fast route, **DETOUR** on a safe
 route, or **WAIT** for more information, and explains why in plain words.
 
+**Demo video (2:41):** [`docs/Kitty_Escape_demo.mp4`](docs/Kitty_Escape_demo.mp4), recorded from the running app.
+
 ![Planner](docs/img/ui_planner.png)
 
 ## Four AI topics in one pipeline

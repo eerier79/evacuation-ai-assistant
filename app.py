@@ -34,7 +34,8 @@ def _page_icon():
         return None
 
 
-st.set_page_config(page_title="Kitty Escape · Evacuation Assistant", page_icon=_page_icon(), layout="wide")
+st.set_page_config(page_title="Kitty Escape · Evacuation Assistant", page_icon=_page_icon(), layout="wide",
+                   initial_sidebar_state="expanded")
 
 # colours chosen so that white text keeps a contrast ratio of at least 4.5
 BLUE, PURPLE, GREEN, RED, ORANGE, NAVY = "#0369A1", "#6D28D9", "#15803D", "#B91C1C", "#C2410C", "#123F63"
@@ -60,7 +61,7 @@ BUTTON_ICONS = {
     "nav_0": "home", "nav_1": "compass", "nav_2": "dice", "nav_3": "flame", "nav_4": "chart", "nav_5": "map",
     "nav_6": "book", "home_play": "play", "home_sim": "flame", "home_vs": "dice",
     "ch_proceed": "bolt", "ch_detour": "shield", "ch_wait": "hourglass", "ch_next": "next", "ch_again": "reset",
-    "preset_0": "home", "preset_1": "map", "preset_2": "route", "train_q": "brain", "add_step": "plus", "reset": "reset", "new_fire": "dice",
+    "train_q": "brain", "add_step": "plus", "reset": "reset", "new_fire": "dice",
     "scn_quiet": "check", "scn_fire": "flame", "scn_unclear": "hourglass", "scn_two": "sensor",
     "tour_back": "back", "tour_next": "next",
 }
@@ -99,7 +100,7 @@ html, body, [class*="css"], .stMarkdown, button, input {{ font-family: 'DM Sans'
                background: linear-gradient(rgba(255,255,255,.28), rgba(255,255,255,0)); }}
 .step b {{ font-size: 1.15rem; display: block; margin: .5rem 0 .25rem; }}
 .qs {{ display:flex; gap:.8rem; align-items:flex-start; }}
-.qs b {{ display:block; font-size:1.05rem; color:#0F172A; }}
+.qs b.t {{ display:block; font-size:1.05rem; color:#0F172A; }}
 .qs span {{ color:#475569; }}
 .option {{ border: 2px solid #E3EAF2; border-radius: 18px; padding: .6rem .9rem; margin-bottom: .55rem; display: flex;
            align-items: center; gap: .8rem; background: #fff; font-size: 1.0rem; }}
@@ -130,9 +131,11 @@ html, body, [class*="css"], .stMarkdown, button, input {{ font-family: 'DM Sans'
 .stButton button {{ border-radius: 999px; font-weight: 600; }}
 h3 {{ font-weight: 700 !important; }}
 {icon_css}
-[class*="st-key-cell_"] button {{ width: 100%; min-height: 40px; padding: 0; border-radius: 10px; font-weight: 700;
-  border: 1px solid #E2E8F0; }}
-[class*="st-key-cell_"] {{ margin-bottom: -0.6rem; }}
+[class*="st-key-cell_"], [class*="st-key-cell_"] > div, [class*="st-key-cell_"] button {{
+  width: 100% !important; min-width: 0 !important; }}
+[class*="st-key-cell_"] button {{ aspect-ratio: 1 / 1; min-height: 0; padding: 0; border-radius: 10px; font-weight: 700;
+  font-size: .8rem; border: 1px solid #E2E8F0; }}
+[class*="st-key-cell_"] {{ margin-bottom: -0.7rem; }}
 .vs {{ text-align:center; }}
 .vs b.big {{ display:block; font-size:2.2rem; color:#0F172A; }}
 .reading {{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin:.2rem 0 .5rem; }}
@@ -249,10 +252,10 @@ canvas{{position:absolute;inset:0;pointer-events:none}}</style>
 
 
 SCENARIOS = {
-    "scn_quiet": ("All quiet · camera CLEAR", [(False,) * 4, (False,) * 4], "CLEAR"),
-    "scn_fire": ("Fire in Z1 · camera SMOKE", [(False, True, False, False)] * 2, "SMOKE"),
-    "scn_unclear": ("One alarm in Z1 · camera CLEAR", [(False, True, False, False)], "CLEAR"),
-    "scn_two": ("Alarms in Z1 and Z3 · no camera", [(False, True, False, True)], "No reading"),
+    "scn_quiet": ("All quiet + CLEAR", [(False,) * 4, (False,) * 4], "CLEAR"),
+    "scn_fire": ("Fire in Z1 + SMOKE", [(False, True, False, False)] * 2, "SMOKE"),
+    "scn_unclear": ("1 alarm Z1 + CLEAR", [(False, True, False, False)], "CLEAR"),
+    "scn_two": ("Alarms Z1 + Z3", [(False, True, False, True)], "No reading"),
 }
 
 
@@ -337,7 +340,7 @@ if page == "Home":
         c1, c2, c3 = st.columns(3)
         c1.button("Play: guide Kitty", key="home_play", type="primary", on_click=go, args=("Planner",))
         c2.button("You vs AI", key="home_vs", on_click=go, args=("You vs AI",))
-        c3.button("Watch a random fire", key="home_sim", on_click=go, args=("Simulation",))
+        c3.button("Random fire", key="home_sim", on_click=go, args=("Simulation",))
     with hero_r:
         kpath = os.path.join(HERE, "assets", "kitty.jpg")
         sketch = ""
@@ -348,10 +351,10 @@ if page == "Home":
     st.write("")
     section("sparkle", "Start in three steps")
     qs = [("compass", "purple", "Open the Planner", "Press <b>Play</b> above or pick <b>Planner</b> on the left."),
-          ("sensor", "slate", "Give it readings", "Tick an alarm and press <b>Add sensor step</b>, or choose a quick scenario."),
+          ("sensor", "slate", "Give it readings", "Tick an alarm and press <b>Add step</b>, or choose a quick scenario."),
           ("bulb", "yellow", "Read the decision", "The coloured banner shows what Kitty does, and <b>Why?</b> explains it.")]
     for col, (ic, c, t, d) in zip(st.columns(3), qs):
-        col.markdown(f"<div class='card qs'>{icon(ic, 46, c)}<div><b>{t}</b><span>{d}</span></div></div>",
+        col.markdown(f"<div class='card qs'>{icon(ic, 46, c)}<div><b class='t'>{t}</b><span>{d}</span></div></div>",
                      unsafe_allow_html=True)
     tiles = [("brain", "purple", "4 + 3", "AI methods"), ("badge", "green", "28", "passing tests"),
              ("flame", "orange", "5000", "simulated fires"), ("shield", "blue", "11.5%", "harm rate (vs 19.5%)")]
@@ -379,7 +382,7 @@ elif page == "Planner":
         col.button(label, key=key, on_click=load_scenario, args=(key,), width="stretch")
     st.write("")
 
-    left, right = st.columns([1, 1.9], gap="large")
+    left, right = st.columns([1.2, 1.8], gap="large")
     with left:
         with st.container(border=True):
             section("sensor", "1 · Smoke sensors")
@@ -387,8 +390,8 @@ elif page == "Planner":
             for i in range(4):
                 st.checkbox(f"Alarm in {ZONE_SHORT[i]}", key=f"s{i}",
                             help="Rings with 90% if the fire is in this zone, 30% if next door, 5% if far away.")
-            b1, b2 = st.columns(2)
-            b1.button("Add sensor step", key="add_step", type="primary", on_click=add_step)
+            b1, b2 = st.columns([1.15, 1])
+            b1.button("Add step", key="add_step", type="primary", on_click=add_step)
             b2.button("Reset", key="reset", on_click=reset_planner)
             hist = st.session_state.history
             if hist:
@@ -397,7 +400,7 @@ elif page == "Planner":
                                     for i, o in enumerate(hist)), unsafe_allow_html=True)
             else:
                 st.markdown(f"<div class='empty'>{icon('sensor', 40)}<div><b>No sensor readings yet.</b><br>"
-                            "Tick alarms and press <b>Add sensor step</b>, or pick a quick scenario above. "
+                            "Tick alarms and press <b>Add step</b>, or pick a quick scenario above. "
                             "Without readings every zone is equally likely.</div></div>", unsafe_allow_html=True)
         with st.container(border=True):
             section("camera", "2 · Door camera")
@@ -428,7 +431,7 @@ elif page == "Planner":
         with st.container(border=True):
             components.html(scene_html(r["world"], r["route"]["path"] if r["route"] else None,
                                        zone_risk=r["zone_risk"] if show_risk else None,
-                                       caption="Kitty is the round token" + ("" if r["route"] else " (waiting in place)")),
+                                       caption="Kitty walks the chosen route" if r["route"] else "Kitty waits in place"),
                             height=450)
 
     st.write("")
@@ -702,12 +705,14 @@ elif page == "Evaluation":
                            for r in rob for p in names])
         try:
             import altair as alt
+            order = [p.split(" (")[0] for p in names]
+            worlds = [r["world"] for r in rob]
             st.altair_chart(alt.Chart(df).mark_bar(cornerRadiusEnd=4).encode(
-                x=alt.X("policy:N", title=None, axis=alt.Axis(labels=False, ticks=False)),
+                x=alt.X("policy:N", title=None, sort=order, axis=alt.Axis(labels=False, ticks=False)),
                 y=alt.Y("harm:Q", title="Harm rate"),
-                color=alt.Color("policy:N", scale=alt.Scale(range=[GREEN, BLUE, "#94A3B8", "#E11D48"]),
+                color=alt.Color("policy:N", scale=alt.Scale(domain=order, range=[GREEN, BLUE, "#94A3B8", "#E11D48"]),
                                 legend=alt.Legend(orient="bottom", title=None)),
-                column=alt.Column("world:N", title=None, header=alt.Header(labelFontSize=12)))
+                column=alt.Column("world:N", title=None, sort=worlds, header=alt.Header(labelFontSize=12)))
                 .properties(width=120, height=230).configure_view(strokeWidth=0))
         except Exception:
             st.dataframe(df)
@@ -777,9 +782,9 @@ elif page == "Map editor":
                 "The Planner uses it as soon as it is valid.</p></div>", unsafe_allow_html=True)
     st.write("")
     PRESETS = {
-        "Kitty's house": list(MAP),
+        "House": list(MAP),
         "Open hall": ["###E####", "#......#", "#......#", "#..##..#", "#..##..#", "#....S.#", "#......#", "#####E##"],
-        "Long corridor": ["E#######", "..#....#", "#.#.##.#", "#.#..#.#", "#.##.#.#", "#....S.#", "######.#", "######E#"],
+        "Corridor": ["E#######", "..#....#", "#.#.##.#", "#.#..#.#", "#.##.#.#", "#....S.#", "######.#", "######E#"],
     }
     TOOLS = {"Wall": "#", "Floor": ".", "Exit": "E", "Start": "S", "Camera door": "D"}
 
@@ -800,9 +805,10 @@ elif page == "Map editor":
             section("map", "Draw")
             st.radio("Tool", list(TOOLS), key="tool", horizontal=True,
                      help="Pick a tool, then click cells. Start and camera door can exist only once.")
+            st.caption("■ wall · · floor · E exit · K Kitty's start · C camera door")
             colours = {"#": ("#64748B", "#fff"), ".": ("#F8FAFC", "#94A3B8"), "E": ("#22C55E", "#fff"),
                        "S": ("#EC4899", "#fff"), "D": ("#0F172A", "#38BDF8")}
-            labels = {"#": "■", ".": "·", "E": "EXIT", "S": "Kitty", "D": "cam"}
+            labels = {"#": "■", ".": "·", "E": "E", "S": "K", "D": "C"}
             css = ""
             for r, row in enumerate(st.session_state.draft):
                 for c, ch in enumerate(row):
