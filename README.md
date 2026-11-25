@@ -29,7 +29,7 @@ python -m pip install -r requirements.txt
 python main.py                  # console demo (input → calculation → output)
 python -m pytest                # 16 tests
 python evaluate.py              # Monte Carlo evaluation → results/
-python -m streamlit run app.py  # web UI: Planner, Simulation, Evaluation, How it works
+python -m streamlit run app.py  # web UI: Home, Planner, Simulation, Evaluation, How it works
 ```
 
 ## Results (5000 simulated fires per policy, seed 2026)
