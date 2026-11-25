@@ -122,3 +122,99 @@ def test_walkthrough_has_five_steps_matching_the_plan():
     steps = walkthrough(r)
     assert [k for k, _, _ in steps] == ["sensors", "hmm", "astar", "bayes", "mdp"]
     assert r["action"] in steps[-1][2]
+
+
+# ---------------------------------------------------------------- v6: new modules and property checks
+import random as _random
+
+
+def test_property_hmm_belief_is_a_distribution():
+    from evacuation import hmm
+    from evacuation.model import transition_matrix, emission_matrix
+    rng = _random.Random(0)
+    for _ in range(200):
+        obs = [tuple(rng.random() < 0.4 for _ in range(4)) for _ in range(rng.randint(1, 6))]
+        b = hmm.filter_sequence([0.25] * 4, transition_matrix(), emission_matrix(), obs)[-1]["posterior"]
+        assert abs(sum(b) - 1) < 1e-9 and all(0 <= x <= 1 for x in b)
+
+
+def test_property_bayes_moves_belief_the_right_way():
+    from evacuation.bayes import door_update
+    rng = _random.Random(1)
+    for _ in range(200):
+        p = rng.uniform(0.01, 0.99)
+        assert door_update(p, "SMOKE", 0.85, 0.15)[0] > p > door_update(p, "CLEAR", 0.85, 0.15)[0]
+
+
+def test_property_astar_matches_bfs_on_unit_costs():
+    from collections import deque
+    from evacuation.astar import astar
+    rng = _random.Random(2)
+    for _ in range(60):
+        walls = {(r, c) for r in range(7) for c in range(7) if rng.random() < 0.25} - {(0, 0), (6, 6)}
+        res = astar((0, 0), (6, 6), walls, 7, 7, lambda c: 1.0)
+        dist, q = {(0, 0): 0}, deque([(0, 0)])
+        while q:
+            r, c = q.popleft()
+            for nr, nc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+                if 0 <= nr < 7 and 0 <= nc < 7 and (nr, nc) not in walls and (nr, nc) not in dist:
+                    dist[(nr, nc)] = dist[(r, c)] + 1
+                    q.append((nr, nc))
+        assert (res is None) == ((6, 6) not in dist)
+        if res:
+            assert len(res["path"]) - 1 == dist[(6, 6)]
+
+
+def test_pomdp_extremes_and_qmdp_overvalues_waiting():
+    from evacuation import pomdp
+    assert pomdp.decide(4, 6, 0.174, 0.0)[0] == "PROCEED"
+    assert pomdp.decide(4, 6, 0.174, 1.0)[0] == "DETOUR"
+    sol = pomdp.solve(4, 6, 0.174)
+    grid, q = pomdp.qmdp_curves(4, 6, 0.174, n=len(sol["grid"]))
+    # QMDP assumes waiting reveals the state, so it never values WAIT below the exact POMDP
+    assert all(a >= b - 1e-6 for a, b in zip(q["WAIT"], sol["Q"]["WAIT"]))
+
+
+def test_wait_outcome_probabilities_sum_to_one():
+    from evacuation.pomdp import wait_outcomes
+    from evacuation.model import Config
+    for p in (0.0, 0.3, 0.9):
+        assert abs(sum(pr for pr, _ in wait_outcomes(p, Config())) - 1) < 1e-9
+
+
+def test_common_random_numbers_same_fire_for_every_policy():
+    from evacuation.simulate import run_many
+    a = run_many("PROCEED", 50, 4)
+    b = run_many("DETOUR", 50, 4)
+    assert [x["true_fire_zone"] for x in a] == [x["true_fire_zone"] for x in b]
+
+
+def test_paired_bootstrap_interval_contains_mean():
+    from evacuation.simulate import run_many, paired_bootstrap, ASSISTANT
+    ci = paired_bootstrap(run_many(ASSISTANT, 300, 9), run_many("PROCEED", 300, 9), B=300)
+    assert ci["low"] <= ci["mean"] <= ci["high"]
+
+
+def test_assistant_still_beats_naive_baselines_when_model_is_wrong():
+    from dataclasses import replace
+    from evacuation.model import Config
+    from evacuation.simulate import evaluate, ASSISTANT, ROBUSTNESS
+    world = replace(Config(), **ROBUSTNESS["Everything worse"])
+    assert evaluate(ASSISTANT, 1500, 3, Config(), world)["utility"] > evaluate("PROCEED", 1500, 3, Config(), world)["utility"]
+
+
+def test_baum_welch_recovers_parameters_and_likelihood_rises():
+    from evacuation.learn import generate, baum_welch, tied_summary
+    data, _ = generate(150, 20, seed=5)
+    res = baum_welch(data, 15)
+    assert all(b >= a - 1e-6 for a, b in zip(res["loglik"], res["loglik"][1:]))
+    est = tied_summary(res["T"], res["E"])
+    assert abs(est["alarm_same"] - 0.9) < 0.05 and abs(est["p_stay"] - 0.7) < 0.06
+
+
+def test_q_learning_learns_something_useful():
+    from evacuation.qlearn import train, evaluate_learned
+    from evacuation.simulate import evaluate
+    Q, curve = train(episodes=8000, window=1000)
+    assert evaluate_learned(Q, 1500, 1)["utility"] > evaluate("PROCEED", 1500, 1)["utility"]
+    assert curve[-1]["avg_utility"] > curve[0]["avg_utility"]

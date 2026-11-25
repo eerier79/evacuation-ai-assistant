@@ -144,7 +144,7 @@ function frame(ts) {{
 }}
 requestAnimationFrame(frame);
 </script>"""
-    css = """<style>
+    css = """<meta charset="utf-8"><style>
 body{margin:0;background:transparent;font-family:'DM Sans',sans-serif}
 .bob{animation:bob .42s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translateY(0)}to{transform:translateY(-4px)}}

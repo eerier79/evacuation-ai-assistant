@@ -1,11 +1,35 @@
 """Integration: HMM belief -> cell risk -> A* routes -> Bayes door reading -> MDP decision."""
 from math import prod
 from functools import lru_cache
-from .model import (Config, ZONE_NAMES, parse_map, zone_of, transition_matrix,
+from .model import (Config, MAP, ZONE_NAMES, parse_map, zone_of, transition_matrix,
                     emission_matrix, block_matrix)
 from . import hmm, bayes, astar, mdp
 
 WORLD = parse_map()
+
+
+@lru_cache(maxsize=64)
+def get_world(map_rows=None):
+    return WORLD if map_rows is None else parse_map(list(map_rows))
+
+
+def validate_map(map_rows):
+    """Problems that stop the planner on a user-drawn map (empty list = the map is usable)."""
+    rows = list(map_rows)
+    problems = []
+    if len(rows) != len(MAP) or any(len(r) != len(MAP[0]) for r in rows):
+        return [f"The map must be {len(MAP)} x {len(MAP[0])} cells."]
+    text = "".join(rows)
+    if text.count("S") != 1:
+        problems.append("Place exactly one start cell (S).")
+    if text.count("E") < 2:
+        problems.append("Place at least two exits (E): one for the fast route and one for the detour.")
+    if not problems:
+        w = parse_map(rows)
+        reach = [g for g in w["exits"] if astar.astar(w["start"], g, w["walls"], w["rows"], w["cols"], lambda c: 1.0)]
+        if len(reach) < 2:
+            problems.append("Kitty must be able to reach at least two exits from the start.")
+    return problems
 
 
 def cell_risk(belief, cfg=Config()):
@@ -30,15 +54,17 @@ def route_risk(path, belief, cfg=Config()):
 
 
 @lru_cache(maxsize=None)
-def _shortest_routes():
+def _shortest_routes(map_rows=None):
+    world = get_world(map_rows)
     out = []
-    for g in WORLD["exits"]:
-        res = astar.astar(WORLD["start"], g, WORLD["walls"], WORLD["rows"], WORLD["cols"], lambda c: 1.0)
-        out.append(dict(res, exit=g))
+    for g in world["exits"]:
+        res = astar.astar(world["start"], g, world["walls"], world["rows"], world["cols"], lambda c: 1.0)
+        if res:
+            out.append(dict(res, exit=g))
     return out
 
 
-def plan(observations, door_reading=None, cfg=Config(), use_hmm=True, use_bayes=True):
+def plan(observations, door_reading=None, cfg=Config(), use_hmm=True, use_bayes=True, map_rows=None):
     """Full pipeline. use_hmm / use_bayes switch parts off for the ablation study."""
     n = len(ZONE_NAMES)
     prior = [1.0 / n] * n
@@ -50,10 +76,11 @@ def plan(observations, door_reading=None, cfg=Config(), use_hmm=True, use_bayes=
     def risky_cost(cell):
         return 1.0 + cfg.risk_weight * zone_risk[zone_of(*cell)]
 
-    fast = dict(min(_shortest_routes(), key=lambda x: x["cost"]))
-    other_exits = [g for g in WORLD["exits"] if g != fast["exit"]]
-    candidates = [dict(astar.astar(WORLD["start"], g, WORLD["walls"], WORLD["rows"], WORLD["cols"], risky_cost), exit=g)
-                  for g in other_exits]
+    world = get_world(map_rows)
+    fast = dict(min(_shortest_routes(map_rows), key=lambda x: x["cost"]))
+    other_exits = [g for g in world["exits"] if g != fast["exit"]]
+    candidates = [dict(res, exit=g) for g in other_exits
+                  if (res := astar.astar(world["start"], g, world["walls"], world["rows"], world["cols"], risky_cost))]
     safe = min(candidates, key=lambda x: x["cost"])
     for r in (fast, safe):
         r["steps"] = len(r["path"]) - 1
@@ -66,7 +93,7 @@ def plan(observations, door_reading=None, cfg=Config(), use_hmm=True, use_bayes=
     V, Q, iterations = mdp.value_iteration(model, cfg.gamma)
     action, values = mdp.decide(Q, p_fast_blocked)
     route = {"PROCEED": fast, "DETOUR": safe}.get(action)
-    return {"world": WORLD, "steps": steps, "belief": belief, "zone_risk": zone_risk,
+    return {"world": world, "steps": steps, "belief": belief, "zone_risk": zone_risk,
             "fast": fast, "safe": safe, "door_reading": reading,
             "p_fast_prior": fast["risk"], "p_fast_posterior": p_fast_blocked,
             "evidence": evidence, "V": V, "Q": Q, "iterations": iterations,

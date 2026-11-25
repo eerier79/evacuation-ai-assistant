@@ -1,0 +1,6 @@
+world,Assistant (HMM + A* + Bayes + MDP) harm,"No MDP, threshold 0.5 (hand-tuned) harm",Always shortest route harm,Always safe detour harm,Assistant (HMM + A* + Bayes + MDP) utility,"No MDP, threshold 0.5 (hand-tuned) utility",Always shortest route utility,Always safe detour utility
+Model is right,0.109,0.112,0.2055,0.3355,51.537,50.704,13.8,-40.834
+Sensors worse than assumed,0.121,0.114,0.2055,0.3355,46.6925,49.913,13.8,-40.738
+Fire spreads faster,0.1065,0.099,0.191,0.339,52.521,55.926,19.6,-42.243
+Camera worse than assumed,0.129,0.1495,0.2055,0.3355,43.4985,35.673,13.8,-40.834
+Everything worse,0.149,0.145,0.191,0.339,35.3755,37.504,19.6,-42.152

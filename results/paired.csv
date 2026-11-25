@@ -1,0 +1,9 @@
+other,utility_diff,utility_low,utility_high,harm_diff,harm_low,harm_high
+Assistant with exact POMDP,-1.3922,-2.8238,-0.0216,0.003,-0.0004,0.0066
+No HMM (ignores smoke sensors),31.712,28.2044,35.1558,-0.0752,-0.0838,-0.0666
+No Bayes (ignores door camera),8.8792,6.539,11.5346,-0.0224,-0.029,-0.0166
+"No MDP, threshold 0.5 (hand-tuned)",1.6814,-0.3468,3.6304,-0.0052,-0.01,-0.0002
+"No MDP, threshold 0.2",3.6694,1.2676,6.0976,-0.0092,-0.0152,-0.0032
+"No MDP, threshold 0.8",5.5518,3.4002,7.7826,-0.0154,-0.021,-0.01
+Always shortest route,31.251,27.8994,34.8604,-0.0804,-0.0894,-0.072
+Always safe detour,90.6958,85.7708,96.3588,-0.2224,-0.2366,-0.2102

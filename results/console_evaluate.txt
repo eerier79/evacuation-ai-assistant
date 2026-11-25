@@ -1,0 +1,34 @@
+1/6 policies on 5000 fires
+  Assistant (HMM + A* + Bayes + MDP)       harm 0.115 ± 0.005  utility 49.3 ± 1.8  waited 0.091
+  Assistant with exact POMDP               harm 0.112 ± 0.004  utility 50.6 ± 1.8  waited 0.020
+  No HMM (ignores smoke sensors)           harm 0.190 ± 0.006  utility 17.5 ± 2.2  waited 0.342
+  No Bayes (ignores door camera)           harm 0.137 ± 0.005  utility 40.4 ± 1.9  waited 0.076
+  No MDP, threshold 0.5 (hand-tuned)       harm 0.120 ± 0.005  utility 47.6 ± 1.8  waited 0.000
+  No MDP, threshold 0.2                    harm 0.124 ± 0.005  utility 45.6 ± 1.9  waited 0.000
+  No MDP, threshold 0.8                    harm 0.130 ± 0.005  utility 43.7 ± 1.9  waited 0.000
+  Always shortest route                    harm 0.195 ± 0.006  utility 18.0 ± 2.2  waited 0.000
+  Always safe detour                       harm 0.337 ± 0.007  utility -41.4 ± 2.7  waited 0.000
+2/6 paired bootstrap (assistant minus other policy)
+  vs Assistant with exact POMDP             utility   -1.4 [-2.8, -0.0]   harm +0.003 [-0.000, +0.007]
+  vs No HMM (ignores smoke sensors)         utility  +31.7 [+28.2, +35.2]   harm -0.075 [-0.084, -0.067]
+  vs No Bayes (ignores door camera)         utility   +8.9 [+6.5, +11.5]   harm -0.022 [-0.029, -0.017]
+  vs No MDP, threshold 0.5 (hand-tuned)     utility   +1.7 [-0.3, +3.6]   harm -0.005 [-0.010, -0.000]
+  vs No MDP, threshold 0.2                  utility   +3.7 [+1.3, +6.1]   harm -0.009 [-0.015, -0.003]
+  vs No MDP, threshold 0.8                  utility   +5.6 [+3.4, +7.8]   harm -0.015 [-0.021, -0.010]
+  vs Always shortest route                  utility  +31.3 [+27.9, +34.9]   harm -0.080 [-0.089, -0.072]
+  vs Always safe detour                     utility  +90.7 [+85.8, +96.4]   harm -0.222 [-0.237, -0.210]
+3/6 robustness: the real world differs from the model
+  Model is right               Assistant 0.109  No MDP, threshold  0.112  Always shortest ro 0.205  Always safe detour 0.336
+  Sensors worse than assumed   Assistant 0.121  No MDP, threshold  0.114  Always shortest ro 0.205  Always safe detour 0.336
+  Fire spreads faster          Assistant 0.106  No MDP, threshold  0.099  Always shortest ro 0.191  Always safe detour 0.339
+  Camera worse than assumed    Assistant 0.129  No MDP, threshold  0.149  Always shortest ro 0.205  Always safe detour 0.336
+  Everything worse             Assistant 0.149  No MDP, threshold  0.145  Always shortest ro 0.191  Always safe detour 0.339
+4/6 sensor sensitivity
+5/6 Baum-Welch learning
+   {'sequences': 25, 'p_stay': 0.712, 'alarm_same': 0.897, 'alarm_adjacent': 0.284, 'alarm_far': 0.052}
+   {'sequences': 100, 'p_stay': 0.697, 'alarm_same': 0.904, 'alarm_adjacent': 0.288, 'alarm_far': 0.069}
+   {'sequences': 400, 'p_stay': 0.707, 'alarm_same': 0.899, 'alarm_adjacent': 0.296, 'alarm_far': 0.054}
+6/6 Q-learning
+  learned policy: harm 0.121, utility 46.6
+
+Charts and tables saved to results/

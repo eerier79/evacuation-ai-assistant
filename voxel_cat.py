@@ -117,7 +117,7 @@ def viewer_html(height=300, sketch_uri=""):
     """Home-page viewer: Kitty slowly turns around; drag to spin, click to make Kitty jump."""
     sketch = (f"<img class='sk' src='{sketch_uri}' alt='original drawing' title='Made from my own drawing'/>"
               if sketch_uri else "")
-    return f"""<style>
+    return f"""<meta charset="utf-8"><style>
 body{{margin:0;background:transparent;font-family:'DM Sans',sans-serif}}
 .wrap{{position:relative;height:{height}px;border-radius:28px;overflow:hidden;cursor:grab;
  background:radial-gradient(120% 90% at 50% 15%,#FFFFFF 0%,#E6F4FF 55%,#CDE8FB 100%);
