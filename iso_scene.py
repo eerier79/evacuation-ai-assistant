@@ -1,26 +1,13 @@
 """Minimal isometric 'pseudo-3D' scene of the building with an animated kitty token (pure SVG + JS, no libraries)."""
-import base64
 import json
 import os
 
 from evacuation.model import zone_of
+from voxel_cat import MODEL_JSON, RENDER_JS
 
 W, H, WALL = 64, 32, 11
 ZONE_FLOOR = ["#FBD5DD", "#FDECB8", "#CDEFD8", "#CFE0FB"]
 ZONE_SIDE = ["#E9B7C3", "#E8D08C", "#A9DDB9", "#A9C3EE"]
-_TOKEN = None
-
-
-def _token_uri():
-    global _TOKEN
-    if _TOKEN is None:
-        path = os.path.join(os.path.dirname(__file__), "assets", "kitty_token.png")
-        try:
-            with open(path, "rb") as f:
-                _TOKEN = "data:image/png;base64," + base64.b64encode(f.read()).decode()
-        except OSError:
-            _TOKEN = ""
-    return _TOKEN
 
 
 def _poly(pts, fill, extra=""):
@@ -31,6 +18,24 @@ def _risk_colour(p):
     p = max(0.0, min(1.0, p))
     r, g, b = 255, int(236 - 160 * p), int(230 - 170 * p)
     return f"rgb({r},{g},{b})"
+
+
+ZONE_DEEP = ["#BE185D", "#B45309", "#15803D", "#1D4ED8"]
+ZONE_LABEL = ["Z0 north-west", "Z1 north-east", "Z2 south-west", "Z3 south-east"]
+
+
+def _legend(zone_risk, blocked):
+    chip = "<span class='chip'><i style='background:{}'></i>{}</span>"
+    items = []
+    if zone_risk is not None:
+        items.append("<span class='chip'><i class='grad'></i>safe → dangerous</span>")
+    else:
+        items += [chip.format(ZONE_FLOOR[z], ZONE_LABEL[z]) for z in range(4)]
+    items += [chip.format("#22C55E", "exit"), chip.format("#16A34A;border-radius:50%", "Kitty's route"),
+              chip.format("#0F172A", "door camera")]
+    if blocked is not None:
+        items.append(chip.format("#F97316", "really blocked"))
+    return "<div class='legend'>" + "".join(items) + "</div>"
 
 
 def scene_html(world, route=None, zone_risk=None, blocked=None, caption=""):
@@ -84,32 +89,57 @@ def scene_html(world, route=None, zone_risk=None, blocked=None, caption=""):
             objects.append(f"<g transform='translate({cx},{cy})'><rect x='-10' y='-22' width='20' height='13' rx='3' fill='#0F172A'/>"
                            "<circle cx='0' cy='-15.5' r='4' fill='#38BDF8'/></g>")
 
+    # zone name tags (with the risk when the map is coloured by risk)
+    for z in range(4):
+        cells = [(r, c) for r in range(rows) for c in range(cols)
+                 if (r, c) not in world["walls"] and zone_of(r, c) == z
+                 and (r, c) not in (*world["exits"], world["door"], world["start"])]
+        if not cells:
+            continue
+        ar = sum(r for r, _ in cells) / len(cells)
+        ac = sum(c for _, c in cells) / len(cells)
+        br, bc = min(cells, key=lambda t: (t[0] - ar) ** 2 + (t[1] - ac) ** 2)
+        tx, ty = top(br, bc)
+        label = f"Z{z}" + (f" · {zone_risk[z] * 100:.0f}%" if zone_risk is not None else "")
+        w = 26 + (34 if zone_risk is not None else 0)
+        objects.append(f"<g transform='translate({tx:.1f},{ty + H / 2:.1f})' opacity='.95'>"
+                       f"<rect x='{-w / 2}' y='-9' width='{w}' height='18' rx='9' fill='#fff' stroke='{ZONE_DEEP[z]}' "
+                       f"stroke-width='1.5'/><text x='0' y='4.2' text-anchor='middle' font-size='11' font-weight='700' "
+                       f"fill='{ZONE_DEEP[z]}'>{label}</text></g>")
+
     pts = [centre(r, c) for r, c in route] if route else [centre(*world["start"])]
-    token = _token_uri()
+    grid = [list(t) for t in route] if route else [list(world["start"])]
     width, height = int(x0 * 2), int((rows + cols) * H / 2 + y0 + 40)
-    svg = (f"<svg viewBox='0 0 {width} {height}' width='100%' style='max-width:640px;display:block;margin:auto'>"
-           f"<defs><clipPath id='clip'><circle cx='0' cy='0' r='19'/></clipPath>"
-           f"<filter id='sh' x='-50%' y='-50%' width='200%' height='200%'><feDropShadow dx='0' dy='3' stdDeviation='2.5' flood-opacity='.35'/></filter></defs>"
+    svg = (f"<svg viewBox='0 0 {width} {height}' width='100%' style='max-width:640px;display:block;margin:auto' "
+           "role='img' aria-label='Isometric map of the house with Kitty and the chosen route'>"
            + "".join(floor) + "".join(objects)
-           + f"<g id='cat'><ellipse cx='0' cy='4' rx='16' ry='6' fill='#000' opacity='.18'/>"
-           f"<g class='bob'><circle cx='0' cy='-20' r='21' fill='#fff' filter='url(#sh)'/>"
-           + (f"<image href='{token}' x='-19' y='-39' width='38' height='38' clip-path='circle(19px at 19px 19px)'/>" if token
-              else "<text x='0' y='-12' text-anchor='middle' font-size='26'>🐱</text>")
-           + "</g></g></svg>")
+           + "<g id='cat'><ellipse cx='0' cy='2' rx='15' ry='6' fill='#0F172A' opacity='.18'/>"
+             "<g class='bob'><g id='catbody'></g></g></g></svg>")
     js = f"""
-<script>
-const P = {json.dumps([[round(x, 1), round(y, 1)] for x, y in pts])};
-const cat = document.getElementById('cat');
-let i = 0, t0 = null; const SEG = 420, PAUSE = 1400;
+<script>{RENDER_JS}
+const M = {MODEL_JSON};
+const P = {json.dumps([[round(x, 1), round(y, 1)] for x, y in pts])}, G = {json.dumps(grid)};
+const cat = document.getElementById('cat'), body = document.getElementById('catbody');
+const FRONT = -Math.PI / 4, SEG = 430, PAUSE = 1500, SCALE = 2.7;
+let yaw = FRONT, drawn = null, t0 = null, last = null;
+function face(dr, dc) {{ return dr > 0 ? 0 : dr < 0 ? Math.PI : dc > 0 ? -Math.PI / 2 : Math.PI / 2; }}
+function draw() {{ if (drawn === null || Math.abs(drawn - yaw) > 0.01) {{ body.innerHTML = catSVG(M, yaw, SCALE); drawn = yaw; }} }}
 function place(x, y) {{ cat.setAttribute('transform', `translate(${{x}},${{y}})`); }}
-place(P[0][0], P[0][1]);
+place(P[0][0], P[0][1]); draw();
 function frame(ts) {{
-  if (P.length < 2) return;
+  const dt = last === null ? 0 : Math.min(0.05, (ts - last) / 1000); last = ts;
   if (t0 === null) t0 = ts;
-  const total = (P.length - 1) * SEG, k = ts - t0;
-  if (k > total + PAUSE) {{ t0 = ts; }}
-  const s = Math.min(k, total) / SEG, j = Math.min(Math.floor(s), P.length - 2), f = s - j;
-  place(P[j][0] + (P[j+1][0] - P[j][0]) * f, P[j][1] + (P[j+1][1] - P[j][1]) * f);
+  let target = FRONT;
+  if (P.length > 1) {{
+    const total = (P.length - 1) * SEG; let k = ts - t0;
+    if (k > total + PAUSE) {{ t0 = ts; k = 0; yaw = face(G[1][0] - G[0][0], G[1][1] - G[0][1]); }}
+    const s = Math.min(k, total) / SEG, j = Math.min(Math.floor(s), P.length - 2), f = s - j;
+    place(P[j][0] + (P[j+1][0] - P[j][0]) * f, P[j][1] + (P[j+1][1] - P[j][1]) * f);
+    if (k < total) target = face(G[j+1][0] - G[j][0], G[j+1][1] - G[j][1]);
+  }}
+  let d = target - yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
+  yaw += d * Math.min(1, dt * 12);
+  draw();
   requestAnimationFrame(frame);
 }}
 requestAnimationFrame(frame);
@@ -121,8 +151,12 @@ body{margin:0;background:transparent;font-family:'DM Sans',sans-serif}
 .flame{animation:fl .5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:bottom}
 @keyframes fl{from{opacity:.85}to{opacity:1}}
 .cap{text-align:center;color:#64748B;font-size:13px;margin-top:4px}
+.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin-top:6px;font-size:12.5px;color:#334155}
+.chip{display:inline-flex;align-items:center;gap:6px}
+.chip i{display:inline-block;width:13px;height:13px;border-radius:4px;border:1px solid rgba(15,23,42,.12)}
+.chip i.grad{width:70px;background:linear-gradient(90deg,rgb(255,236,230),rgb(255,76,60))}
 </style>"""
-    return css + svg + (f"<div class='cap'>{caption}</div>" if caption else "") + js
+    return (css + svg + _legend(zone_risk, blocked) + (f"<div class='cap'>{caption}</div>" if caption else "") + js)
 
 
 def scene_height(world):

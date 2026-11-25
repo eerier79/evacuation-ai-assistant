@@ -27,7 +27,7 @@ door camera ──────────────────────�
 ```
 python -m pip install -r requirements.txt
 python main.py                  # console demo (input → calculation → output)
-python -m pytest                # 16 tests
+python -m pytest                # 18 tests
 python evaluate.py              # Monte Carlo evaluation → results/
 python -m streamlit run app.py  # web UI: Home, Planner, Simulation, Evaluation, How it works
 ```
@@ -62,6 +62,18 @@ OUTPUT decision: DETOUR, go to exit (7, 2) via 6 steps
 
 ## Assumptions
 All numbers are in `evacuation/model.py` (`Config`) and are assumed, not measured: fire stays in its zone 0.7; sensor alarm 0.90 / 0.30 / 0.05 (same / adjacent / far zone); blockage 0.70 / 0.15 / 0.02; camera 0.85 / 0.15; rewards ARRIVE 100, HARM 300, WAIT cost 20, γ = 0.9.
+
+## Web interface (Kitty Escape)
+- **Home**: a voxel (pixel-3D) model of Kitty, built from the author's own drawing; drag to spin, click to jump.
+- **Planner**: one-click scenarios, smoke sensors and door camera, a plain-language *Why this decision?*,
+  an isometric map coloured by risk with zone labels and a legend, a 5-step *Walk me through it* guide,
+  and all numbers (HMM, A*, Bayes, MDP) in an expandable panel.
+- **Simulation**: random fires with the real fire revealed; Kitty turns to face the way she walks.
+- **Evaluation**: all policies on the same fires, 95% error bars, the assistant highlighted.
+- Custom glass-style icon set (`icons.py`), colours with at least 4.5:1 contrast for white text, mobile layout.
+
+Files: `app.py` (interface), `iso_scene.py` (map), `voxel_cat.py` (3D Kitty), `icons.py` (icons),
+`evacuation/explain.py` (plain-language explanations, tested).
 
 ## Limitations
 - Probabilities are assumptions; real data would be needed to fit them.

@@ -107,3 +107,18 @@ def test_assistant_beats_baselines_in_simulation():
     assert full["harm_rate"] < shortest["harm_rate"]
     assert full["utility"] > shortest["utility"]
     assert full["utility"] > no_hmm["utility"]
+
+
+def test_explanation_names_the_decision_and_numbers():
+    from evacuation.explain import why
+    r = plan([Z1_ALARM, Z1_ALARM], "SMOKE")
+    text = " ".join(why(r))
+    assert "safe detour" in text and "93%" in text and "Z1" in text
+
+
+def test_walkthrough_has_five_steps_matching_the_plan():
+    from evacuation.explain import walkthrough
+    r = plan([Z1_ALARM], "CLEAR")
+    steps = walkthrough(r)
+    assert [k for k, _, _ in steps] == ["sensors", "hmm", "astar", "bayes", "mdp"]
+    assert r["action"] in steps[-1][2]
